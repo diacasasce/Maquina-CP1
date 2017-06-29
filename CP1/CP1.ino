@@ -1,4 +1,6 @@
 
+// manejado por GitHub
+
 #include <Stepper.h>
 // variables del sistema
 const int Pasos = 3200;  // Número de pasos * 4
