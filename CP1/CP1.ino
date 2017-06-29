@@ -17,17 +17,19 @@ const int Next = 3; // pulsador de Siguente-> IN
 const int Av_man = 13; // pulsador avance manual -> IN
 const int Re_man = 12; // pilsador retroceso manual -> IN
 
-
 // inicializa la libreria 'stepper' en los pines 8 a 11
 Stepper myStepper(Pasos, 8, 9, 10, 11);
 // variables del programa
 int recorrido = 0;
-
+int Va_max = 100;
+int Vr_max = 200;
+float  Vel = 0;
 void setup() {
   // inicializacion de pines I/O
   pinMode(fin_av, INPUT);
   pinMode(fin_ret, INPUT);
   pinMode(Modo, INPUT);
+  pinMode(Paro, INPUT);
   pinMode(Next, INPUT);
   pinMode(Av_man, INPUT);
   pinMode(Re_man, INPUT);
@@ -43,10 +45,22 @@ void setup() {
 void loop() {
   // Gira sentido horario
   int avance = 5;
-  int vel = 200;
   int av_final = 20;
-
-  avanza(vel, 50, av_final);
+  float falta = av_final;
+  while (abs(falta) > 0) {
+    int puntos = abs(falta) / Resol;
+    if (puntos > 50) {
+      puntos=50;
+    }
+    falta = avanza(Va_max, puntos, falta);
+    if (falta > 0 && falta < 0.05) {
+      falta = 0;
+    }
+    if (falta > 0.05 && falta < 0.1) {
+      falta = 0.1;
+    }
+  }
+  delay(2000);
   recorrido += av_final;
   Serial.println(digitalRead(Modo));
   if (!digitalRead(Modo)) {  // si esta en modo manual
@@ -74,10 +88,8 @@ void loop() {
 
    La funcion se encarga de mover el motor un avance determinado teniendo en cuenta una aceleracion gradual
 */
-void avanza(int Vfin, int puntos, float avance) {
+float avanza(int Vfin, int puntos, float avance) {
   Serial.print("avanza : ");
-  //  if (avance <= 50 && avance >= -50)
-  //int sig = abs(avance) / avance;
   float av = avance;
   Serial.print(av);
   Serial.print(" ; ");
@@ -87,32 +99,45 @@ void avanza(int Vfin, int puntos, float avance) {
   float dV = Vfin / k; // Variacion de la velocidad por intervalo
   Serial.println(k);
   //Serial.print(" ; ");
-  float Vel = 0;
+  Vel = 0;
   while (k > 0) {
     Vel += dV; // variable de invremento de la velocidad;
     Serial.println("entro");
     myStepper.setSpeed(Vel);
     Serial.println(Vel);
-    recorrer(av / (4 * puntos));
+    float  falta = recorrer(av / (4 * puntos), Vfin);
+    if (abs(falta) > 0) {
+      return falta;
+    }
     k--;
   }
-  recorrer((3 * av) / 4);
+  float falta = recorrer((3 * av) / 4, Vfin);
+  if (abs(falta) > 0) {
+    return falta;
+  }
+  return 0;
 }
 /*
    FUNCION recorer( float avance)
    float avance -> avance en mm deseado, permite decimales , es importante tener en cuenta la resolucion
    La Funcion se encarga de mover el motor un avance determinado.
 */
-void recorrer(float avance) {
+float recorrer(float avance, int V_obj) {
   int av = avance / Resol;
   int sig = abs(avance) / avance;
   float steps = (sig * avance) / Resol;
   steps = steps * (Factor);
+  Serial.print(steps);
+  Serial.print("-");
   while (steps > 0) {
     myStepper.step(sig);
     steps--;
-    emergencia();
+    if (emergencia(V_obj)) {
+      Serial.println( steps );
+      return sig * Resol * steps / Factor;
+    }
   }
+  return 0;
 }
 /*
    FUNCION emergencia(Bool Paro)
@@ -120,18 +145,23 @@ void recorrer(float avance) {
 
    La funcion espera a que se desactive el paro de emergencia y continua el proceso desde donde se detuvo.
 */
-void emergencia() {
+bool emergencia(int V_obj) {
+  bool stopped = false;
   while (digitalRead(Paro)) {
-    Serial.println("emergencia");
-    man_Avance();
+    stopped = true;
   }
+  if (stopped && (Vel > (0.5 * V_obj))) {
+    //    Serial.println("emergencia");
+    return true;
+  }
+  return false;
 }
 /*Funcion man_Avance()*/
 void man_Avance() {
   if (digitalRead(Av_man)) {
-    recorrer(Resol);
+    //    recorrer(Resol);
   }
   if (digitalRead(Re_man)) {
-    recorrer(-Resol);
+    //    recorrer(-Resol);
   }
 }
