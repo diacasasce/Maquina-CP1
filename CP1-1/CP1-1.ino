@@ -22,16 +22,17 @@ float Resol = 0.0016; // en mm
 float Avance = 5; // mm/rev
 long Fac_vel = 0;// el factor cambia de RPM a us para controlar la velocidad.
 float Fac_ava = 0; // el factor cambia de mm a pasos para controlar el avance
+int Fac_unit = 4;
 
 //variables del proceso
 float Pos_actual = 0;
-int Stp_rec = 0; // pasos recorridos
 long Vel_del = 0; // delay correspondiente a la velocidad convertida.
 float Vel_actual = 0;
 float Vel_max = 200;
 int k = 60;
 float Vobj = 0;
-
+long int Unit = 0;
+long int Ciclos;
 void setup() {
   // inicializacion de pines I/O
   pinMode(Pulp, OUTPUT); //p12
@@ -49,38 +50,73 @@ void setup() {
   // se da valor a los factores de conversion
   Fac_ava = Pasos / Avance;
   Fac_vel = (Pasos / 30); // de RPM a Pasos por Segundo
-
+  Fac_unit = 4;
 }
 
 void loop() {
+  /*
+    Serial.print("ciclos: ");
+    Serial.print(Ciclos);
+    Serial.print("unidades: ");
+    Serial.println(Unit);
+  */
+  int avan[] = {20, 20, 20, 20, 20, -100};
+  int acel[] = {25, 25, 25, 25, 25 , 10};
+  int velo[] = {150, 150, 150, 150, 150, 400};
   long pre = millis();
-  avance(110, 10, 360);
-  long act = millis();
-  float rpm = (act - pre);
-  rpm = 5 / rpm;
-  rpm = rpm * 1000;
-  rpm = 60 * rpm;
-  delay(2000);
-  k += 10;
+  //  avance(110, 10, 60);
+  //  secuencia(6, avan, acel, velo);
+  av_manual();
+  // delay(2000);
 }
-
+/*
+   Funciones Creadas
+*/
+/* Funcion ser_Vel ( foat RPM)
+   Se encarga de convertir el de la velocidad en RPM a el valor del tiempo de espera entre los cambios de la señal de control del motor.
+   Parametros : float RPM -> corresponde a la velocidad en revoluciones por minuto.
+*/
 void set_Vel(float RPM) {
+
   Vel_del = (1 / ((RPM / 1) * Fac_vel)) * 1000000;
 }
+/* Funcion get_steps(float dist)
+   Se encarga de convertir el valor de distancia de avance requerida en pasos del motor, teniendo en cuenta las configuraciones del motor.
+   Esta funcion es la funcion contraria a get_dist.
+   Parametros: float dist -> corresponde a la distancia deseada en unidades de mm.
+   Salidas: long result -> numero de pasos del motor correspondientes a la distancia requerida.
+*/
 long get_steps(float dist) {
   long result = dist * Fac_ava;
   return result;
 }
+/* Funcion get_dist(long Steps)
+   Se encarga de devolver la distancia en mm correspondiente al numero de pasos ingresados como parametro, segun las condiciones del motor.
+   Esta funcion es la funcion contraria a get_steps.
+   Parametros:  long steps -> corresponde al numero de pasos del motor.
+   Salidas: float result -> distanci en mm correspondiente con el numero de pasos ingresados.
+*/
 float get_dist(long steps) {
   float result = steps;
   result = result / Fac_ava;
   return result;
 }
+/* Funcion avance(float dist, int porcentaje, float Vel_fin)
+   Esta funcion permite el control de avance del dispositivo con un periodo de aceleracion, desde 0 hasta la velocidad requerida, segun lo establezca el usuario.
+   La aceleracion se realiza de forma lineal.
+   Parametros:
+   float dist -> Distancia de avance deseada en mm.
+   int porcentaje -> prorcentaje del recorrido total que se desea como periodo de aceleracion 10-90.
+   float vel_final -> Velocidad final del desplazamiento.
+*/
 void avance(float dist, int porcentaje, float Vel_fin) {
   Vobj = Vel_fin;
   int porcent = porcentaje;
   if (porcent < 10) {
     porcent = 10;
+  }
+  if (porcent > 90) {
+    porcent = 90;
   }
   float intervalo = dist / 100;
   float dV = Vel_fin / porcentaje;
@@ -107,6 +143,11 @@ void avance(float dist, int porcentaje, float Vel_fin) {
     avance(falta, porcentaje / 2, Vel_fin);
   }
 }
+/* Funcion recorrer(float dist)
+   Esta funcion se encarga de realizar desplazamientos del dispositivo a velocidad constante, preciamente definida usando la funcion set_vel
+   Parametros: float dist-> distncia deseada para el desplazamiento en mm
+   Salidas: faltan-> la cantidad de mm faltantes para completar el recorrido, usalmente se espera que el valor devuelto sea 0 pero en el caso de no serlo se devuelve el valor para poder realizar los ajustes necesarios para completar elrecorrido, la variacion en este resultado se debe al empleo del paro de emergencias.
+*/
 float recorrer(float dist) {
   long steps = get_steps(dist);
   long sig = abs(dist) / dist;
@@ -118,12 +159,20 @@ float recorrer(float dist) {
     digitalWrite(Dir, HIGH);
   }
   long falta = sig * Steps(stp);
+  float faltan = get_dist(falta);
   if (abs(falta) > 0) {
-    Serial.println(get_dist(falta));
+    Serial.println(faltan);
   }
-  return (get_dist(falta));
+  Pos_actual += (dist - faltan);
+  return (faltan);
 }
+/*Funcion Steps(long steps)
+    esta funcion realiza el movimiento del dispositivo una cantidad establecida de pasos.
+    Parametros: long steps -> corresponde al numero de pasos que se desea recorrer.
+    Salidas: long stp -> corresponde al numero de pasos faltantes para terminar el recorrido del elemento, este valor se mantiene en 0, pero puede variar segun el uso del paro de emergencia.
+*/
 long Steps(long steps) {
+
   long stp = steps;
   while (stp > 0) {
     digitalWrite(Pulp, LOW);
@@ -140,18 +189,43 @@ long Steps(long steps) {
   }
   return 0;
 }
-
-/*
-   FUNCION emergencia(Bool Paro)
-   Bool Paro -> variable que indica si está activo el paro de emergencia o no lo está
-
-   La funcion espera a que se desactive el paro de emergencia y continua el proceso desde donde se detuvo.
+/* Funcion secuencia(int pasos, int avances[], int aceleraciones[], float velocidades[])
+   Esta funcion se encarga de interpretar y correr la secuencia de operacion deseada, teniendo en cuenta las condiciones de desplazamiento aceleracion y velocidad de cada paso de la secuencia, asi como el modo de oeracion (manual - automatico).
+   Parametros
+   int pasos -> numero de acciones o pasos a desarrollar en la secuencia.
+   int avances[] -> arreglo en el cual estan consignadas las diferentes condiciones de avance de cada paso.
+   int aceleraciones[] -> arreglo en el cual estan consignadas las diferentes condiciones de aceleracion de cada paso.
+   int velocidades[] -> arreglo en el cual estan consignadas las diferentes condiciones de velocidad de cada paso.
+   - NOTA IMPORTANTE-
+   SE RECOMIENDA QUE LOS 3 ARREGLOS TENGAN LA MISMA CANTIDAD DE ELEMENTOS PARA EVITAR INCONVENIENTES EN LA OPERACION
+*/
+void secuencia(int pasos, int avances[], int aceleraciones[], int velocidades[] ) {
+  for (int i = 0; i < pasos; i++) {
+    avance(avances[i], aceleraciones[i], velocidades[i]);
+    Serial.println(Pos_actual);
+    if (digitalRead(Modo)) {
+      while (!digitalRead(Next)) {
+        delay(100);
+      }
+    } else {
+      delay(500);
+    }
+  }
+  Ciclos++;
+  Unit = Ciclos * Fac_unit;
+}
+/* Funcion emergencia()
+    esta funcion se encarga de la rutia de paro de emergencia definida por el proceso.
+    - funcion espera a que se desactive el paro de emergencia y continua el proceso desde donde se detuvo.
+    en caso de que el dispositivo llevara una velocidad considerable para reiniciar desde la ultima condicion de velocidad, se devolvera un valor verdadero, en el caso contrario se deolvera falso.
 */
 bool emergencia() {
   bool stopped = false;
   while (digitalRead(Paro)) {
     stopped = true;
-        Serial.println("wait");
+    Serial.println("wait");
+    av_manual();
+    delay(100);
   }
   if (stopped && (Vel_actual > (0.5 * Vobj))) {
     //    Serial.println("emergencia");
@@ -161,5 +235,25 @@ bool emergencia() {
   }
   return false;
 }
+/*Funcion av_manual()
+   Reliza avances manuales a baja velocidad y ajusta la posicion mientras lo hace para poder hacer un avance a la siguiente posicion.
+   Se establece una velocidad de 10 RPM para los movimientos en ambas direcciones
+*/
+int av_manual() {
+  int Vac = Vel_actual;
+  set_Vel(10);
+  if (digitalRead(Av_man)) {
+    digitalWrite(Dir, LOW);
+    Steps(1);
+    Pos_actual += get_dist(1);
+    set_Vel(Vac);
+    Serial.println(Pos_actual);
+  } else if (digitalRead(Re_man)) {
+    digitalWrite(Dir, HIGH);
+    Steps(1);
+    Pos_actual += get_dist(-1);
+    set_Vel(Vac);
+    Serial.println(Pos_actual);
+  }
 
-
+}
