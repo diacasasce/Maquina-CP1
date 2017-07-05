@@ -60,14 +60,15 @@ void loop() {
     Serial.print("unidades: ");
     Serial.println(Unit);
   */
-  int avan[] = {20, 20, 20, 20, 20, -100};
+  int avan[] = {110, 110, 110, 110, 110, -550};
+ // int avan[] = {25, 25, 25, 25, 25 , -110};
   int acel[] = {25, 25, 25, 25, 25 , 10};
-  int velo[] = {150, 150, 150, 150, 150, 400};
+  int velo[] = {150, 150, 150, 150, 150, 300};
   long pre = millis();
   //  avance(110, 10, 60);
-  //  secuencia(6, avan, acel, velo);
-  av_manual();
-  // delay(2000);
+    secuencia(6, avan, acel, velo);
+   //av_manual();
+   delay(2000);
 }
 /*
    Funciones Creadas
@@ -208,7 +209,7 @@ void secuencia(int pasos, int avances[], int aceleraciones[], int velocidades[] 
         delay(100);
       }
     } else {
-      delay(500);
+      delay(1000);
     }
   }
   Ciclos++;
