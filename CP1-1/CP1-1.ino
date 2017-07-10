@@ -52,7 +52,8 @@ void setup() {
   Fac_ava = Pasos / Avance;
   Fac_vel = (Pasos / 30); // de RPM a Pasos por Segundo
   Fac_unit = 4;
-  go_home();
+  
+  
 }
 
 void loop() {
@@ -62,15 +63,20 @@ void loop() {
     Serial.print("unidades: ");
     Serial.println(Unit);
   */
-  int avan[] = {110, 110, 110, 110, 110, -550};
+  Serial.println("Start");
+  go_home();
+  wait_Next();
+  
+  int avan[] = {11, 11, 11, 11, 11, -55};
   // int avan[] = {25, 25, 25, 25, 25 , -110};
   int acel[] = {25, 25, 25, 25, 25 , 10};
   int velo[] = {150, 150, 150, 150, 150, 300};
   long pre = millis();
-  //  avance(110, 10, 60);
+  //avance(110, 10, 60);
   secuencia(6, avan, acel, velo);
+
   //av_manual();
-  delay(2000);
+  
 }
 /*
    Funciones Creadas
@@ -113,6 +119,7 @@ float get_dist(long steps) {
    float vel_final -> Velocidad final del desplazamiento.
 */
 void avance(float dist, int porcentaje, float Vel_fin) {
+  Serial.println("avanza");
   float Pos_final = 0;
   int porcent = porcentaje;
   float intervalo = dist / 100;
@@ -128,30 +135,14 @@ void avance(float dist, int porcentaje, float Vel_fin) {
     porcent = 90;
   }
   // ya esta definido el porcentaje del recorrido correspndiente a la aceleracion.
-
-  if ((Pos_final > 0 && Pos_final < Pos_max ) ) {
-  }
-  if ((Pos_final > 0 && Pos_final < Pos_max ) ) {
-    while (porcent > 0) {
+  for (int i = 0; i < 100; i++) {
+    if (i < porcent) {
       Vel_actual += dV;
-      set_Vel(Vel_actual);
-      //    Serial.println(Vel_actual);
-      falta = recorrer(intervalo);
-      if (abs(falta) > 0) {
-        avance(falta, porcentaje / 2, dV);
-        Serial.println(falta);
-      }
-      porcent -= 1;
+    } else {
+      Vel_actual = Vel_fin;
     }
-    set_Vel(Vel_fin);
-    float restante = porcentaje;
-    restante = (1 - (restante / 100)) * dist;
-    //Serial.println(restante);
-    falta = recorrer(restante);
-    if (abs(falta) > 0) {
-      //    Serial.println(falta);
-      avance(falta, porcentaje / 2, Vel_fin);
-    }
+    set_Vel(Vel_actual);
+    recorrer(intervalo);
   }
 }
 /* Funcion recorrer(float dist)
@@ -160,16 +151,17 @@ void avance(float dist, int porcentaje, float Vel_fin) {
    Salidas: faltan-> la cantidad de mm faltantes para completar el recorrido, usalmente se espera que el valor devuelto sea 0 pero en el caso de no serlo se devuelve el valor para poder realizar los ajustes necesarios para completar elrecorrido, la variacion en este resultado se debe al empleo del paro de emergencias.
 */
 float recorrer(float dist) {
+  
   long steps = get_steps(dist);
   long sig = abs(dist) / dist;
   long stp = abs(steps);
   if (sig > 0) { //giro horario
-    digitalWrite(Dir, LOW);
-  }
-  if (sig < 0) { //giro anti-horario
     digitalWrite(Dir, HIGH);
   }
-  long falta = sig * Steps(stp,sig);
+  if (sig < 0) { //giro anti-horario
+    digitalWrite(Dir, LOW);
+  }
+  long falta = sig * Steps(stp, sig);
   float faltan = get_dist(falta);
   if (abs(falta) > 0) {
     Serial.println(faltan);
@@ -182,15 +174,16 @@ float recorrer(float dist) {
     Parametros: long steps -> corresponde al numero de pasos que se desea recorrer.
     Salidas: long stp -> corresponde al numero de pasos faltantes para terminar el recorrido del elemento, este valor se mantiene en 0, pero puede variar segun el uso del paro de emergencia.
 */
-long Steps(long steps,int dir) {
+long Steps(long steps, int dir) {
   long stp = steps;
   while (stp > 0) {
-    if (digitalRead(fin_av)&&dir>0) {
+    if (!digitalRead(fin_av) && dir > 0) {
       return 0;
     }
-    if (digitalRead(fin_ret)&&dir<0) {
+    if (!digitalRead(fin_ret) && dir < 0) {
       return 0;
     }
+    //Serial.println(stp);
     digitalWrite(Pulp, LOW);
     digitalWrite(Puln, HIGH);   // turn the LED on (HIGH is the voltage level)
     delayMicroseconds(Vel_del);                       // wait for a second
@@ -260,13 +253,13 @@ int av_manual() {
   set_Vel(10);
   if (digitalRead(Av_man)) {
     digitalWrite(Dir, LOW);
-    Steps(1,1);
+    Steps(1, 1);
     Pos_actual += get_dist(1);
     set_Vel(Vac);
     Serial.println(Pos_actual);
   } else if (digitalRead(Re_man)) {
     digitalWrite(Dir, HIGH);
-    Steps(-1,-1);
+    Steps(-1, -1);
     Pos_actual += get_dist(-1);
     set_Vel(Vac);
     Serial.println(Pos_actual);
@@ -278,9 +271,21 @@ int av_manual() {
 
 */
 void go_home() {
-  while (!digitalRead(fin_ret)) {
-    set_Vel(10);
-    Steps(-1,-1);
+  Serial.println("go home");
+  while (digitalRead(fin_ret)) {
+    Serial.println("go back");
+    set_Vel(100);
+    digitalWrite(Dir, LOW);
+    Steps(1, -1);
   }
   Pos_actual = 0;
+}
+/*funcion wait_Next()
+   espera a que se precione el boton siquiente;
+*/
+void wait_Next() {
+  while (!digitalRead(Next)) {
+    delay(1);
+  }
+  return;
 }
