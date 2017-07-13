@@ -12,10 +12,13 @@ Creada por Diego Alejandro Casas, Julio 12, 2017
 class Microstepper
 {
   public:
-    Microstepper(int Pulp,int Puln,int Dir,float Resol,float Avance);
+    Microstepper(int Pulp,int Puln,int Dir,float Pasos,float Avance);
     void set_Vel(float RPM);
     void set_paro(int Paro);
     void set_manual(int avance,int retro);
+    vod set_final(int fin_av,int fin_re)
+    float get_dist(long steps);
+    long get_steps(float dist);
     void avance(float dist, int porcentaje, float Vel_fin);
     float recorrer(float dist);
     long Steps(long steps, int dir);
@@ -30,11 +33,14 @@ int go_home();
     int _Paro;
     int _Av_man;
     int _Re_man;
-    float _Resol;
+    int _fin_av;
+    int _fin_ret;
+    int _Pasos;
     float _Avance;
-    float _Fac_velo;
+    float _Fac_vel;
     float _Fac_ava;
     float _Vel_del;
     flaot _Vel_actual;
+    float _Pos_actual:
 };
 #endif

@@ -1,0 +1,13 @@
+Microstepper KEYWORD1
+
+set_Vel KEYWORD2
+set_paro KEYWORD2
+set_manual KEYWORD2
+set_final KEYWORD2
+get_dist KEYWORD2
+get_steps KEYWOR2
+avance KEYWORD2
+recorrer KEYWORD2
+Steps KEYWORD2
+emergencia KEYWORD2
+av_manual KEYWORD2
