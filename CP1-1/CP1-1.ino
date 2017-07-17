@@ -5,6 +5,9 @@
     desventaja? ... mas codigo
 */
 //Configuracion pines I/O
+const int pPulp = 14; // Pulso positivo Piston
+const int pPuln = 15; // Pulso negativo Piston
+const int pDir = 16; // Direccion Piston
 const int Pulp = 12; // este pin se conecta al Pul+ del driver control de velocidad -> IN
 const int Puln = 11; // este pin se conecta al Pul- del driver control de velocidad -> IN
 const int Dir = 10; // este pin de conecta a dir- en el driver control de direccion -> IN
@@ -15,7 +18,7 @@ const int Paro = 6; // interruptor paro de emergencia-> IN
 const int Next = 5; // pulsador de Siguente-> IN
 const int Av_man = 4; // pulsador avance manual -> IN
 const int Re_man = 3; // pilsador retroceso manual -> IN
-
+const int Co_man = 2; // pilsador retroceso manual -> IN
 // variables del sistema
 int Pasos = 3200;
 float Resol = 0.0016; // en mm
@@ -36,6 +39,9 @@ long int Unit = 0;
 long int Ciclos;
 void setup() {
   // inicializacion de pines I/O
+  pinMode(pPulp, OUTPUT); //p14
+  pinMode(pPuln, OUTPUT); //p15
+  pinMode(pDir, OUTPUT); //p16
   pinMode(Pulp, OUTPUT); //p12
   pinMode(Puln, OUTPUT); //p11
   pinMode(Dir, OUTPUT); //10
@@ -46,14 +52,16 @@ void setup() {
   pinMode(Next, INPUT);  //p5
   pinMode(Av_man, INPUT);  //p4
   pinMode(Re_man, INPUT);  //p3
+  pinMode(Co_man, INPUT);  //p3
   // inicializa el puerto serial
   Serial.begin(9600);
   // se da valor a los factores de conversion
-  Fac_ava = Pasos / Avance;
+  Fac_ava = Pasos / (1.35 * Avance);
   Fac_vel = (Pasos / 30); // de RPM a Pasos por Segundo
   Fac_unit = 4;
-  
-  
+  avance(-500, 10, 600);
+  wait_Next();
+  Serial.println("Start");
 }
 
 void loop() {
@@ -63,23 +71,23 @@ void loop() {
     Serial.print("unidades: ");
     Serial.println(Unit);
   */
-  Serial.println("Start");
-  go_home();
-  wait_Next();
   
-  int avan[] = {11, 11, 11, 11, 11, -55};
-  // int avan[] = {25, 25, 25, 25, 25 , -110};
+  /*
+  int avan[] = {100, 100, 100, 100, 1510, -550};
   int acel[] = {25, 25, 25, 25, 25 , 10};
-  int velo[] = {150, 150, 150, 150, 150, 300};
+  int velo[] = {150, 150, 150, 150, 150, 600};*/
+  int avan[] = {560, -560};
+  int acel[] = {10 , 10};
+  int velo[] = {300, 600};
   long pre = millis();
-  //avance(110, 10, 60);
-  secuencia(6, avan, acel, velo);
-
+  //secuencia(2, avan, acel, velo);
+  Corte(5);
+  wait_Next();
   //av_manual();
-  
+
 }
 /*
-   Funciones Creadas
+  -+   Funciones Creadas
 */
 /* Funcion ser_Vel ( foat RPM)
    Se encarga de convertir el de la velocidad en RPM a el valor del tiempo de espera entre los cambios de la señal de control del motor.
@@ -151,7 +159,7 @@ void avance(float dist, int porcentaje, float Vel_fin) {
    Salidas: faltan-> la cantidad de mm faltantes para completar el recorrido, usalmente se espera que el valor devuelto sea 0 pero en el caso de no serlo se devuelve el valor para poder realizar los ajustes necesarios para completar elrecorrido, la variacion en este resultado se debe al empleo del paro de emergencias.
 */
 float recorrer(float dist) {
-  
+
   long steps = get_steps(dist);
   long sig = abs(dist) / dist;
   long stp = abs(steps);
@@ -177,10 +185,10 @@ float recorrer(float dist) {
 long Steps(long steps, int dir) {
   long stp = steps;
   while (stp > 0) {
-    if (!digitalRead(fin_av) && dir > 0) {
+    if (digitalRead(fin_av) && dir > 0) {
       return 0;
     }
-    if (!digitalRead(fin_ret) && dir < 0) {
+    if (digitalRead(fin_ret) && dir < 0) {
       return 0;
     }
     //Serial.println(stp);
@@ -212,10 +220,8 @@ void secuencia(int pasos, int avances[], int aceleraciones[], int velocidades[] 
   for (int i = 0; i < pasos; i++) {
     avance(avances[i], aceleraciones[i], velocidades[i]);
     Serial.println(Pos_actual);
-    if (digitalRead(Modo)) {
-      while (!digitalRead(Next)) {
-        delay(100);
-      }
+    if (!digitalRead(Modo)) {
+      wait_Next();
     } else {
       delay(1000);
     }
@@ -225,14 +231,18 @@ void secuencia(int pasos, int avances[], int aceleraciones[], int velocidades[] 
 }
 /* Funcion emergencia()
     esta funcion se encarga de la rutia de paro de emergencia definida por el proceso.
-    - funcion espera a que se desactive el paro de emergencia y continua el proceso desde donde se detuvo.
+  - funcion espera a que se desactive el paro de emergencia y continua el proceso desde donde se detuvo.
     en caso de que el dispositivo llevara una velocidad considerable para reiniciar desde la ultima condicion de velocidad, se devolvera un valor verdadero, en el caso contrario se deolvera falso.
 */
 bool emergencia() {
   bool stopped = false;
-  while (digitalRead(Paro)) {
+  if (!digitalRead(Paro)) {
+    Serial.println("Paro de emergencia");
+  }
+  while (!digitalRead(Paro)) {
     stopped = true;
     Serial.println("wait");
+    delay(1000);
     av_manual();
     delay(100);
   }
@@ -250,29 +260,61 @@ bool emergencia() {
 */
 int av_manual() {
   int Vac = Vel_actual;
-  set_Vel(10);
-  if (digitalRead(Av_man)) {
-    digitalWrite(Dir, LOW);
-    Steps(1, 1);
-    Pos_actual += get_dist(1);
-    set_Vel(Vac);
-    Serial.println(Pos_actual);
-  } else if (digitalRead(Re_man)) {
-    digitalWrite(Dir, HIGH);
-    Steps(-1, -1);
-    Pos_actual += get_dist(-1);
-    set_Vel(Vac);
-    Serial.println(Pos_actual);
-  }
 
+  float ac;
+  float k = 10;
+  int dir;
+  if (digitalRead(Co_man)) {
+    Corte(5);
+  } else {
+    while (digitalRead(Re_man) || digitalRead(Av_man)) {
+
+      k++;
+      ac = k / 50;
+      Serial.println(k);
+
+      set_Vel(300 * ac);
+      if (digitalRead(Re_man)) {
+        digitalWrite(Dir, HIGH);
+        dir = -1;
+        //      Serial.println("backward");
+        Pos_actual += get_dist(-1);
+        //     Serial.println(Pos_actual);
+      }
+      if (digitalRead(Av_man)) {
+        digitalWrite(Dir, LOW);
+        dir = 1;
+        //    Serial.println("forward");
+        Pos_actual += get_dist(-1);
+        //     Serial.println(Pos_actual);
+      }
+
+
+      //Serial.println(stp);
+      for (int i = 0; i < 100; i++) {
+        if (digitalRead(fin_av) && dir > 0) {
+          return 0;
+        }
+        if (digitalRead(fin_ret) && dir < 0) {
+          return 0;
+        }
+        digitalWrite(Pulp, LOW);
+        digitalWrite(Puln, HIGH);   // turn the LED on (HIGH is the voltage level)
+        delayMicroseconds(Vel_del);                       // wait for a second
+        digitalWrite(Puln, LOW);
+        digitalWrite(Pulp, HIGH);    // turn the LED off by making the voltage LOW
+        delayMicroseconds(Vel_del);
+      }
+    }
+  }
+  set_Vel(Vac);
 }
 /*Funcion go_home()
    Secuencia de inicio para configurar el punto cero de la maquina.
-
 */
 void go_home() {
   Serial.println("go home");
-  while (digitalRead(fin_ret)) {
+  while (!digitalRead(fin_ret)) {
     Serial.println("go back");
     set_Vel(100);
     digitalWrite(Dir, LOW);
@@ -286,6 +328,52 @@ void go_home() {
 void wait_Next() {
   while (!digitalRead(Next)) {
     delay(1);
+    Serial.print("next?");
+    delay(100);
   }
   return;
+}
+/* funcion Corte()
+  define la rutina de corte completa un avance y un retroceso
+*/
+
+void Corte(float dist) {
+  Serial.println("");
+  Serial.println("cortando");
+  long   stp = get_steps(dist);
+  
+  long stpi = stp;
+  Serial.println(stpi);
+  long  Vel_crt = (1 / ((100 / 1) * Fac_vel)) * 1000000;
+  digitalWrite(pDir, LOW);
+  while (stpi > 0) {
+    //Serial.println(stp);
+    digitalWrite(pPulp, LOW);
+    digitalWrite(pPuln, HIGH);   // turn the LED on (HIGH is the voltage level)
+    delayMicroseconds(Vel_crt);                       // wait for a second
+    digitalWrite(pPuln, LOW);
+    digitalWrite(pPulp, HIGH);    // turn the LED off by making the voltage LOW
+    delayMicroseconds(Vel_crt);
+    stpi--;
+    if (emergencia()) {
+      Serial.println(stpi);
+      //      return stpi;
+    }
+  }
+  delay(500);
+  digitalWrite(pDir, HIGH);
+  while (stpi < stp) {
+    //Serial.println(stp);
+    digitalWrite(pPulp, LOW);
+    digitalWrite(pPuln, HIGH);   // turn the LED on (HIGH is the voltage level)
+    delayMicroseconds(Vel_crt);                       // wait for a second
+    digitalWrite(pPuln, LOW);
+    digitalWrite(pPulp, HIGH);    // turn the LED off by making the voltage LOW
+    delayMicroseconds(Vel_crt);
+    stpi++;
+    if (emergencia()) {
+      Serial.println(stpi);
+      //      return stpi;
+    }
+  }
 }
