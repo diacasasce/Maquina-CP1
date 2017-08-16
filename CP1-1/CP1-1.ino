@@ -1,26 +1,29 @@
 /*
-    CP1.1
-    Movimiento del servomotor sin uso de libreria
-    Ventaja mas velocidad
-    desventaja? ... mas codigo
+   CP1.1
+   Movimiento del servomotor sin uso de libreria
+   Ventaja mas velocidad
+   desventaja? ... mas codigo
 */
+// Pines de Selector
+const int sw1 = 52;
+const int sw2 = 53;
 //Configuracion pines I/O
-const int pPulp = 14; // Pulso positivo Piston
-const int pPuln = 15; // Pulso negativo Piston
+const int pEna = 14; // Pulso positivo Piston
+const int pPul = 17; // Pulso negativo Piston
 const int pDir = 16; // Direccion Piston
 const int Pulp = 12; // este pin se conecta al Pul+ del driver control de velocidad -> IN
 const int Puln = 11; // este pin se conecta al Pul- del driver control de velocidad -> IN
 const int Dir = 10; // este pin de conecta a dir- en el driver control de direccion -> IN
 const int fin_av = 9; // final de carrera en el punto de corte -> IN
-const int fin_ret = 8; // final de carrera en el punto inicial -> IN
+const int fin_ret = 2; // final de carrera en el punto inicial -> IN
 const int Modo = 7; // interruptor para seleccionar manual ( 1 ) o automatico (0) -> IN
 const int Paro = 6; // interruptor paro de emergencia-> IN
 const int Next = 5; // pulsador de Siguente-> IN
 const int Av_man = 4; // pulsador avance manual -> IN
-const int Re_man = 3; // pilsador retroceso manual -> IN
-const int Co_man = 2; // pilsador retroceso manual -> IN
-const int ModP=A0;
-const int ModV=A1;
+const int Re_man = 8; // pilsador retroceso manual -> IN
+const int Co_man = 3; // pilsador retroceso manual -> IN
+const int ModP = A0;
+const int ModV = A1;
 // variables del sistema
 int Pasos = 3200;
 float Resol = 0.0016; // en mm
@@ -39,10 +42,14 @@ int k = 60;
 float Vobj = 0;
 long int Unit = 0;
 long int Ciclos;
+
 void setup() {
+  // inicializacion pines de selector
+  pinMode(sw1, INPUT_PULLUP);
+  pinMode(sw2, INPUT_PULLUP);
   // inicializacion de pines I/O
-  pinMode(pPulp, OUTPUT); //p14
-  pinMode(pPuln, OUTPUT); //p15
+  pinMode(pPul, OUTPUT); //p14
+  pinMode(pEna, OUTPUT); //p15
   pinMode(pDir, OUTPUT); //p16
   pinMode(Pulp, OUTPUT); //p12
   pinMode(Puln, OUTPUT); //p11
@@ -61,60 +68,50 @@ void setup() {
   Fac_ava = Pasos / (1.35 * Avance);
   Fac_vel = (Pasos / 30); // de RPM a Pasos por Segundo
   Fac_unit = 4;
-  avance(-500, 20, 600);
+  Serial.println("Set");
   wait_Next();
+  avance(-800, 20, 600);
+  //wait_Next();
+  digitalWrite(pEna, LOW);
+  //  sube_Corte(20);
+  digitalWrite(pEna, LOW);
+//  avance(150, 20, 600);
   Serial.println("Start");
 }
 
 void loop() {
+
+
+  bool s1 = digitalRead(sw1);
+  bool s2 = digitalRead(sw2);
+
   /*
-    Serial.print("ciclos: ");
-    Serial.print(Ciclos);
-    Serial.print("unidades: ");
-    Serial.println(Unit);
+
+    if (s1 && s2) {
+    wait_Next();
+    BloqueM25k();
+    } else if (s1 && !s2) {//verde
+    wait_Next();
+    BloqueM5k();
+    } else if (s2 && !s1) {
+    avance(200,10,500);
+    wait_Next();
+    BloqueC();
+    }
   */
-
-  /* caso avance completo bloque de 30*/
-  int avan[] = {300, -800};
-  int acel[] = {25 , 10};
-  int velo[] = {80, 600};
-  avance(150, 10, 300);
-  /*---------------------------------*/
-
-  /* caso avance completo bloque de 30 cortes cada 4 cm
-    int avan[] = {40,40,40,40,40,40,40, -800};
-    int acel[] = {10,10,10,10,10,10,10, 10};
-    int velo[] = {80,80,80,80,80,80,80, 600};
-    avance(150,10,300);
-    wait_Next();
-    secuencia(8, avan, acel, velo);
-    ---------------------------------*/
-  /* caso avance completo bloque de 56
-    int avan[] = {560, -800};
-    int acel[] = {25 , 10};
-    int velo[] = {80, 600};
-    wait_Next();
-    secuencia(2, avan, acel, velo);
-    ---------------------------------*/
-  /* caso palitos de 10 bloque de 56
-    int avan[] = {100,100,100,100,100,100, -800};
-    int acel[] = {15,15,15,15,15,15, 10};
-    int velo[] = {80,80,80,80,80,80, 600};
-    wait_Next();
-    secuencia(2, avan, acel, velo);
-    ---------------------------------*/
-
-
-  //  Corte(60);
-  delay(1000);
   wait_Next();
+  BloqueM5k();
+
+
+  delay(1000);
+
   //av_manual();
 
 }
 /*
   -+   Funciones Creadas
 */
-/* Funcion ser_Vel ( foat RPM)
+/* Funcion set_Vel ( foat RPM)
    Se encarga de convertir el de la velocidad en RPM a el valor del tiempo de espera entre los cambios de la señal de control del motor.
    Parametros : float RPM -> corresponde a la velocidad en revoluciones por minuto.
 */
@@ -154,6 +151,8 @@ float get_dist(long steps) {
 */
 void avance(float dist, int porcentaje, float Vel_fin) {
   Serial.println("avanza");
+  float corr = 1.052631579;
+  dist = dist * corr;
   float Pos_final = 0;
   int porcent = porcentaje;
   float intervalo = dist / 100;
@@ -242,7 +241,7 @@ long Steps(long steps, int dir) {
    - NOTA IMPORTANTE-
    SE RECOMIENDA QUE LOS 3 ARREGLOS TENGAN LA MISMA CANTIDAD DE ELEMENTOS PARA EVITAR INCONVENIENTES EN LA OPERACION
 */
-void secuencia(int pasos, int avances[], int aceleraciones[], int velocidades[] ) {
+void secuencia(float pasos, float avances[], float aceleraciones[], float velocidades[], bool corte[] ) {
   for (int i = 0; i < pasos; i++) {
     float modP = analogRead(A0);
     modP = map(modP, 0, 1023, 0, 2000);
@@ -250,16 +249,35 @@ void secuencia(int pasos, int avances[], int aceleraciones[], int velocidades[] 
     float modV = analogRead(A1);
     modV = map(modV, 0, 1023, 0, 2000);
     modV = modV / 1000;
-    avance(avances[i]*modP, aceleraciones[i], velocidades[i]*modV);
-    Serial.println(Pos_actual);
-    // Corte(60);
-    if (!digitalRead(Modo)) {
-      wait_Next();
+    modV = 1;
+    modP = 1;
+    float av = avances[i] * modP;
+    float ac = aceleraciones[i];
+    float ve = velocidades[i] * modV;
+    bool co = corte[i];
+    if (av != 0) {
+      avance(av, ac, ve);
     } else {
-      delay(1000);
+      wait_Next();
+    }
+    Serial.println(Pos_actual);
+    ;
+    if (av > 0 && co) {
+      if (!digitalRead(Modo) ) {
+        wait_Next();
+        // Corte(25);
+        wait_Next();
+      } else {
+        //Corte(25);
+      }
+    } else {
+      if (!digitalRead(Modo)) {
+        wait_Next();
+      } else {
+        delay(100);
+      }
     }
   }
-
   Ciclos++;
   Unit = Ciclos * Fac_unit;
 }
@@ -295,19 +313,18 @@ bool emergencia() {
 int av_manual() {
   int Vac = Vel_actual;
 
-  float ac;
+  float ac = 0;
   float k = 10;
   int dir;
   if (digitalRead(Co_man)) {
-    Corte(20);
-    Corte(20);
-    Corte(20);
+    Serial.println("cut");
+    digitalWrite(pEna, LOW);
+    Corte(25);
   } else {
     while (digitalRead(Re_man) || digitalRead(Av_man)) {
-      if (k < 80) {
-        k++;
-      }
+      digitalWrite(pEna, LOW);
       ac = k / 50;
+      k++;
       Serial.println(k);
 
       Vel_del = set_Vel(300 * ac);
@@ -373,61 +390,116 @@ void wait_Next() {
   define la rutina de corte completa un avance y un retroceso
 */
 
-void Corte(float dist) {
+void Corte (float dist) {
+  baja_Corte(10);
+  wait_Next();
+  sube_Corte(10);
+}
+void baja_Corte(float dist) {
+  float corr = 0.7018;
   Serial.println("");
-  Serial.println("cortando");
-  long   stp = get_steps(dist);
+  Serial.println("baja");
+  long   stp = get_steps(4 * dist * corr);
   int inter = stp / 40;
   long stpi = stp;
-  Serial.println(stpi);
-  long  Vel_crt = 100;
-  Serial.println(Vel_crt);
-  digitalWrite(pDir, LOW);
-  int kv = 0;
+  float ac = 0;
+  float k = 10;
+  delay(1000);
+  Serial.println("cut");
+  ac = 250;
+
   while (stpi > 0) {
+    digitalWrite(pEna, HIGH);
+    digitalWrite(pDir, HIGH);
+    ac = k / 500;
 
-    //    Serial.println(stpi);
-    digitalWrite(pPulp, LOW);
-    digitalWrite(pPuln, HIGH);   // turn the LED on (HIGH is the voltage level)
-    delayMicroseconds(Vel_crt);                       // wait for a second
-    digitalWrite(pPuln, LOW);
-    digitalWrite(pPulp, HIGH);    // turn the LED off by making the voltage LOW
-    delayMicroseconds(Vel_crt);
-    stpi--;
-    if (stpi % inter == 0 && kv < 3) {
-      Vel_crt -= 22;
-      Serial.println(Vel_crt);
-      kv++;
+    long vec = set_Vel(200 * ac);
+    Serial.println(vec);
+    if (vec > 50) {
+      k++;
     }
-    //    Vel_crt=(500- kv);
-    delayMicroseconds(Vel_crt);
+    if (vec > 150) {
+      vec = 150;
+    }
+    int sp = 25;
+    if (sp > stpi) {
+      sp = stpi;
+    }
+    for (int i = 0; i < sp; i++) {
+      digitalWrite(pPul, HIGH);   // turn the LED on (HIGH is the voltage level)
+      delayMicroseconds(vec);                       // wait for a second
+      digitalWrite(pPul, LOW);    // turn the LED off by making the voltage LOW
+      delayMicroseconds(vec);
+    }
 
+    // wait for a second
+    stpi -= sp;
   }
-  delay(10);
-  kv = 0;
-  Vel_crt = 100;
-  digitalWrite(pDir, HIGH);
-  Serial.println("backM");
-  while (stpi < stp) {
-    //Serial.println(stp);
-    digitalWrite(pPulp, LOW);
-    digitalWrite(pPuln, HIGH);   // turn the LED on (HIGH is the voltage level)
-    delayMicroseconds(Vel_crt);                       // wait for a second
-    digitalWrite(pPuln, LOW);
-    digitalWrite(pPulp, HIGH);    // turn the LED off by making the voltage LOW
-    delayMicroseconds(Vel_crt);
-    stpi++;
-    if (stpi % inter == 0 && kv < 3) {
-      Vel_crt -= 20;
-      kv++;
+  digitalWrite(pEna, LOW);
+  digitalWrite(pEna, LOW); //activado
+}
+void sube_Corte(float dist) {
+  float corr = 0.7018;
+  Serial.println("");
+  Serial.println("cortando");
+  long   stp = get_steps(4 * dist * corr);
+  int inter = stp / 40;
+  long stpi = stp;
+  float ac = 0;
+  float k = 10;
+  delay(1000);
+  Serial.println("cut");
+  ac = 250;
+
+  while (stpi > 0) {
+    digitalWrite(pEna, HIGH);
+    digitalWrite(pDir, LOW);
+    ac = k / 500;
+
+    long vec = set_Vel(200 * ac);
+    Serial.println(vec);
+    if (vec > 50) {
+      k++;
     }
-    //    Vel_crt=(1050-kv);
-    delayMicroseconds(Vel_crt);
-    if (emergencia()) {
-      Serial.println(stpi);
-      //      return stpi;
+    if (vec > 150) {
+      vec = 150;
     }
+    int sp = 25;
+    if (sp > stpi) {
+      sp = stpi;
+    }
+    for (int i = 0; i < sp; i++) {
+      digitalWrite(pPul, HIGH);   // turn the LED on (HIGH is the voltage level)
+      delayMicroseconds(vec);                       // wait for a second
+      digitalWrite(pPul, LOW);    // turn the LED off by making the voltage LOW
+      delayMicroseconds(vec);
+    }
+
+    // wait for a second
+    stpi -= sp;
   }
-  digitalWrite(pPulp, LOW);
-  digitalWrite(pPuln, LOW);   // turn the LED on (HIGH is the voltage level)
+}
+void BloqueM5k() {
+  float  avan[] = {500, -130, 0, 100, -800};
+  float  acel[] = {20, 10, 10, 10 , 10};
+  float  velo[] = {450, 600, 0, 200, 600};
+  bool  cort[] = {0, 0, 0, 0, 0};
+  int  movs = 5;
+  secuencia(movs, avan, acel, velo, cort);
+}
+void BloqueM25k() {
+  float  avan[] = {295, -130, 0, 270, -800};
+  float  acel[] = {20, 10, 10, 10 , 10};
+  float  velo[] = {350, 600, 0, 200, 600};
+  bool  cort[] = {1, 0, 0, 0, 0};
+  int  movs = 5;
+  secuencia(movs, avan, acel, velo, cort);
+}
+void BloqueC() {
+  float  avan[] = {300, 50, -800, 150};
+  float  acel[] = {10,   10 , 10, 10};
+  float  velo[] = {600, 100,  600, 600};
+  bool  cort[] = {0, 0, 0, 0, 0};
+  int  movs = 4;
+  secuencia(movs, avan, acel, velo, cort);
 }

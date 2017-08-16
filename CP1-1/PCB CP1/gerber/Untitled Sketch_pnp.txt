@@ -1,0 +1,77 @@
+*Pick And Place List
+*Company=
+*Author=
+*eMail=
+*
+*Project=Untitled Sketch
+*Date=17:08:51
+*CreatedBy=Fritzing 0.9.3b.04.19.5c895d327c44a3114e5fcc9d8260daf0cbb52806
+*
+*
+*Coordinates in mm, always center of component
+*Origin 0/0=Lower left corner of PCB
+*Rotation in degree (0-360, math. pos.)
+*
+*No;Value;Package;X;Y;Rotation;Side;Name
+1;2.2k;0805 [SMD];47.5623;-31.0674;0;Top;R9
+2;;THT;23.1874;-23.1934;90;Bottom;S2
+3;2.2k;0805 [SMD];37.4023;-20.9074;180;Top;R10
+4;;THT;21.9174;-27.1721;180;Bottom;M P-
+5;;molex-1x2_lock;77.9244;-28.7814;0;Bottom;op5
+6;;1x01_offset;2.14348;-38.6874;-90;Bottom;P2
+7;;molex-1x2_lock;65.2244;-29.1624;0;Bottom;Avance
+8;;;46.0549;-11.8417;0;Bottom;Via2
+9;;;51.0018;-27.1304;0;Bottom;Componente3
+10;;1x01_offset;2.14348;-15.8274;-90;Bottom;M2
+11;;1x01_offset;2.14348;-43.7674;-90;Bottom;P3
+12;;molex-1x2_lock;54.8104;-44.4024;0;Bottom;next
+13;;THT;40.9674;-33.6074;90;Bottom;S6
+14;;molex-1x2_lock;77.9244;-44.0214;0;Bottom;op1
+15;;THT;21.9174;-37.5029;180;Bottom;M P+
+16;;molex-1x2_lock;85.5444;-36.4014;0;Bottom;op4
+17;;molex-1x2_lock;55.3184;-18.1134;0;Bottom;FCA
+18;2.2k;0805 [SMD];17.0823;-13.2874;180;Top;R6
+19;;THT;39.6974;-27.4261;180;Bottom;O_PP
+20;;molex-1x2_lock;54.8104;-36.7824;0;Bottom;paro
+21;;molex-1x2_lock;77.9244;-13.5414;0;Bottom;op9
+22;2.2k;0805 [SMD];31.4333;-20.9074;180;Top;R5
+23;;1x01_offset;2.14348;-48.8474;-90;Bottom;P4
+24;2.2k;0805 [SMD];34.8623;-13.2874;180;Top;R8
+25;2.2k;0805 [SMD];47.0724;-20.9074;0;Top;R7
+26;;0805 [SMD];47.5623;-28.7814;180;Top;L5
+27;;molex-1x3_lock;55.0644;-10.3664;0;Bottom;Pot 1
+28;;THT;23.1874;-33.6074;90;Bottom;S3
+29;;0805 [SMD];29.4013;-28.5274;180;Top;L2
+30;;molex-1x2_lock;85.5444;-44.0214;0;Bottom;op2
+31;;THT;39.6974;-17.1828;180;Bottom;O_PD
+32;;0805 [SMD];29.2743;-18.4944;180;Top;L3
+33;;THT;39.6974;-37.586;180;Bottom;O_PE
+34;2.2k;0805 [SMD];29.2924;-31.0674;0;Top;R3
+35;2.2k;0805 [SMD];29.2924;-41.2274;0;Top;R1
+36;;THT;40.9674;-23.4474;90;Bottom;S5
+37;;molex-1x3_lock;66.6214;-10.3664;0;Bottom;Pot 2
+38;;1x01_offset;2.14348;-10.7474;-90;Bottom;M1
+39;;molex-1x2_lock;65.2244;-18.2404;0;Bottom;FCR
+40;;molex-1x2_lock;85.5444;-13.5414;0;Bottom;op10
+41;;molex-1x2_lock;85.5444;-28.7814;0;Bottom;op6
+42;;molex-1x2_lock;77.9244;-21.1614;0;Bottom;op7
+43;;0805 [SMD];47.0724;-38.6874;180;Top;L6
+44;2.2k;0805 [SMD];37.4023;-30.9404;180;Top;R12
+45;;molex-1x2_lock;64.9704;-44.4024;0;Bottom;Corte
+46;2.2k;0805 [SMD];47.0724;-36.2744;0;Top;R11
+47;;THT;23.1874;-13.2874;90;Bottom;S1
+48;;THT;40.9674;-13.2874;90;Bottom;S4
+49;;molex-1x2_lock;5.15338;-4.52443;-90;Bottom;JP1
+50;;1x01_offset;2.14348;-25.9874;-90;Bottom;M4
+51;;;46.0549;-16.7185;0;Bottom;Via1
+52;;molex-1x2_lock;85.5444;-21.1614;0;Bottom;op8
+53;;molex-1x2_lock;77.9244;-36.4014;0;Bottom;op3
+54;;1x01_offset;2.14348;-33.6074;-90;Bottom;P1
+55;;molex-1x2_lock;64.9704;-36.7824;0;Bottom;Regreso
+56;;0805 [SMD];29.2924;-38.6874;180;Top;L1
+57;;molex-1x2_lock;55.0644;-29.1624;0;Bottom;modo
+58;2.2k;0805 [SMD];17.0823;-23.4474;180;Top;R4
+59;;0805 [SMD];47.0543;-18.6214;180;Top;L4
+60;;THT;21.9174;-17.1828;180;Bottom;M D-
+61;;1x01_offset;2.14348;-20.9074;-90;Bottom;M3
+62;2.2k;0805 [SMD];17.0823;-33.6074;180;Top;R2
